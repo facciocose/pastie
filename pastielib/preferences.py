@@ -13,6 +13,12 @@ class PrefsGConfClient(object):
 	def notify_add(self, key, callback):
 		self.gconf_client.notify_add(GCONF_ROOT + '/' + key, callback)
 
+def get_use_primary():
+	return gconf.client_get_default().get_bool(GCONF_ROOT + '/use_primary')
+
+def set_use_primary(value):
+	gconf.client_get_default().set_bool(GCONF_ROOT + '/use_primary', value)
+
 def get_show_quit():
 	return gconf.client_get_default().get_bool(GCONF_ROOT  + '/show_quit_on_menu')
 
@@ -80,14 +86,26 @@ class PreferencesDialog():
 
 		misc_pref_expander = gtk.Expander(_("Misc"))
 
+		misc_pref_expander_box = gtk.VBox()
+
+		use_primary_checkbutton = gtk.CheckButton(_("Use primary selection"))
+		if get_use_primary() == True:
+			use_primary_checkbutton.set_active(True)
+		else:
+			use_primary_checkbutton.set_active(False)
+		use_primary_checkbutton.connect("toggled", self.toggle_use_primary)
+		misc_pref_expander_box.add(use_primary_checkbutton)
+
 		show_misc_checkbutton = gtk.CheckButton(_("Show 'quit' on menu"))
 		if get_show_quit() == True:
 			show_misc_checkbutton.set_active(True)
 		else:
 			show_misc_checkbutton.set_active(False)
 		show_misc_checkbutton.connect("toggled", self.toggle_show_quit)
-		misc_pref_expander.add(show_misc_checkbutton)
+		misc_pref_expander_box.add(show_misc_checkbutton)
 
+		misc_pref_expander.add(misc_pref_expander_box)
+		
 		prefs_box.pack_start(misc_pref_expander)
 
 		vbox.pack_start(prefs_box)
@@ -100,6 +118,12 @@ class PreferencesDialog():
 			set_show_quit(0)
 		else:
 			set_show_quit(1)
+
+	def toggle_use_primary(self, event):
+		if get_use_primary() == True:
+			set_use_primary(0)
+		else:
+			set_use_primary(1)
 
 	def change_history_size(self, event):
 		set_history_size(int(self.hist_size_pref_spin.get_value()))

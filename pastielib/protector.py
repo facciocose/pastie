@@ -42,9 +42,11 @@ class ClipboardProtector(object):
 		
 		# get the clipboard gdk atom
 		self.clipboard = gtk.clipboard_get(gtk.gdk.SELECTION_CLIPBOARD)
+		
+		self.primary = gtk.clipboard_get(gtk.gdk.SELECTION_PRIMARY)
 
 		# we use this to check if clipboard contents changed on special cases
-		self.clipboard_specials_text = ""
+		self.specials_text = ""
 
 		# create the history data strucure
 		self.history = history.HistoryMenuItemCollector()
@@ -69,11 +71,24 @@ class ClipboardProtector(object):
 		self.gconf_client.notify_add('show_quit_on_menu', self.update_menu)
 		self.gconf_client.notify_add('item_length', self.update_menu)
 		self.gconf_client.notify_add('history_size', self.history.adjust_maxlen)
+		self.gconf_client.notify_add('use_primary', self.toggle_primary)
 		
 		# check clipboard changes on owner-change event
 		self.clipboard.connect("owner-change", self.check)
+		self.toggle_primary()
+
 		# run an auxiloary loop for special cases (e.g., gvim)
 		gobject.timeout_add(500, self.check_specials)
+
+	def toggle_primary(self, a=None, b=None, c=None, d=None):
+		if prefs.get_use_primary() == True:
+			self.primary_handler = self.primary.connect("owner-change", self.check_primary)
+			gobject.timeout_add(1000, self.check_primary_specials)
+		else:
+			try:
+				self.primary.disconnect(self.primary_handler)
+			except:
+				pass
 
 	# returns a list of history items from a XML file.
 	def recover_history(self, input_file="~/.clipboard_history"):
@@ -154,7 +169,15 @@ class ClipboardProtector(object):
 			clipboard_contents = self.clipboard.wait_for_image()
 			self.history.add(history.ImageHistoryMenuItem(clipboard_contents))
 			self.save_history()
-
+	
+	def check_primary(self, clipboard=None, event=None):
+		if prefs.get_use_primary() == True:
+			if self.primary.wait_is_text_available():
+				primary_tmp = self.primary.wait_for_text()
+				if primary_tmp not in ("", None):
+					self.history.add(history.PrimaryHistoryMenuItem(primary_tmp))
+					self.save_history()
+	
 	def check_specials(self):
 		targets = self.clipboard.wait_for_targets()
 		# if there are no targets, we simply return True
@@ -162,11 +185,24 @@ class ClipboardProtector(object):
 			# vim doesn't set the timestamp target, so we have to check for its changes.
 			if '_VIM_TEXT' in targets:
 				clipboard_tmp = self.clipboard.wait_for_text()
-				if clipboard_tmp not in ("", None) and clipboard_tmp != self.clipboard_specials_text:
+				if clipboard_tmp not in ("", None) and clipboard_tmp != self.specials_text:
 					self.history.add(history.TextHistoryMenuItem(clipboard_tmp))
-					self.clipboard_specials_text = clipboard_tmp
+					self.specials_text = clipboard_tmp
 					self.save_history()
 		return True
+
+	def check_primary_specials(self):
+		if prefs.get_use_primary() == True:
+			primary_targets = self.primary.wait_for_targets()
+			if '_VIM_TEXT' in primary_targets:
+				primary_tmp = self.primary.wait_for_text()
+				if primary_tmp not in ("", None) and primary_tmp != self.specials_text:
+					self.history.add(history.PrimaryHistoryMenuItem(primary_tmp))
+					self.specials_text = primary_tmp
+					self.save_history()
+			return True
+		else:
+			return False
 	
 	# create and show the menu
 	def update_menu(self, gconfclient=None, gconfentry=None, gconfvalue=None, d=None):
