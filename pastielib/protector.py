@@ -194,12 +194,13 @@ class ClipboardProtector(object):
 	def check_primary_specials(self):
 		if prefs.get_use_primary() == True:
 			primary_targets = self.primary.wait_for_targets()
-			if '_VIM_TEXT' in primary_targets:
-				primary_tmp = self.primary.wait_for_text()
-				if primary_tmp not in ("", None) and primary_tmp != self.specials_text:
-					self.history.add(history.PrimaryHistoryMenuItem(primary_tmp))
-					self.specials_text = primary_tmp
-					self.save_history()
+			if primary_targets != None:
+				if '_VIM_TEXT' in primary_targets:
+					primary_tmp = self.primary.wait_for_text()
+					if primary_tmp not in ("", None) and primary_tmp != self.specials_text:
+						self.history.add(history.PrimaryHistoryMenuItem(primary_tmp))
+						self.specials_text = primary_tmp
+						self.save_history()
 			return True
 		else:
 			return False
