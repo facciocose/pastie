@@ -1,74 +1,72 @@
-# Ukrainian translations for Pastie package.
-# Copyright (C) 2010 Felipe Morales
+# Finnish translation for Pastie.
+# Copyright (C) 2010 Jiri Grönroos
 # This file is distributed under the same license as the Pastie package.
-# Pavel Reznikov <pashka.reznikov@gmail.com>, 2010.
-#
+# Jiri Grönroos <jiri.gronroos@iki.fi>, 2010.
+# 
 msgid ""
 msgstr ""
-"Project-Id-Version: Pastie\n"
+"Project-Id-Version: Pastie 0.5.x\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2010-07-31 14:37-0400\n"
-"PO-Revision-Date: 2010-06-18 19:45-0300\n"
-"Last-Translator: Pavel Reznikov <pashka.reznikov@gmail.com>\n"
-"Language-Team: Ukrainian\n"
+"PO-Revision-Date: 2010-07-25 12:22+0200\n"
+"Last-Translator: Jiri Grönroos <jiri.gronroos@iki.fi>\n"
+"Language-Team: Finnish\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%"
-"10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
 #: ../pastielib/edit_clipboard.py:27
 msgid "Editing clipboard"
-msgstr "Редагування буфера обміну"
+msgstr "Leikepöydän muokkaus"
 
 #: ../pastielib/edit_clipboard.py:57
 msgid "_Replace"
-msgstr ""
+msgstr "_Korvaa"
 
 #: ../pastielib/edit_clipboard.py:57
 msgid "R"
-msgstr ""
+msgstr "K"
 
 #: ../pastielib/protector.py:205
 msgid "Edit clipboard"
-msgstr "Редагувати буфер обміну"
+msgstr "Muokkaa leikepöytää"
 
 #: ../pastielib/protector.py:210
 msgid "Remove current"
-msgstr ""
+msgstr "Poista nykyinen"
 
 #: ../pastielib/protector.py:213
 msgid "Clean history"
-msgstr "Очистити історію"
+msgstr "Tyhjennä historia"
 
 #: ../pastielib/protector.py:217
 msgid "Nothing in history or clipboards"
-msgstr ""
+msgstr "Historia ja leikepöytä ovat tyhjiä"
 
 #: ../pastielib/protector.py:220
 msgid "Quit"
-msgstr ""
+msgstr "Lopeta"
 
 #: ../pastielib/preferences.py:38
 msgid "Pastie preferences"
-msgstr ""
+msgstr "Pastien asetukset"
 
 #: ../pastielib/preferences.py:55
 msgid "History size"
-msgstr ""
+msgstr "Historian koko"
 
 #: ../pastielib/preferences.py:68
 msgid "Menu history entries length"
-msgstr ""
+msgstr "Valikon historiakohteiden pituus"
 
 #: ../pastielib/preferences.py:81
 msgid "Misc"
-msgstr ""
+msgstr "Muut"
 
 #: ../pastielib/preferences.py:83
 msgid "Show 'quit' on menu"
-msgstr ""
+msgstr "Näytä Lopeta-toiminto valikossa"
 
 #: ../pastielib/history.py:108
 msgid "more"
-msgstr ""
+msgstr "lisää"

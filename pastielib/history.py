@@ -18,6 +18,8 @@ import gobject
 import gtk
 import gtk.gdk
 import gnomevfs
+import os.path
+from fractions import Fraction
 
 import pastielib.preferences as prefs
 
@@ -46,6 +48,7 @@ class TextHistoryMenuItem(HistoryMenuItem):
 
 		l = l.replace('\t', u'\u22c5')
 		l = l.replace('\n', u'\u21b2')
+		l = l.replace('_', '__')
 		
 		return l
 
@@ -60,15 +63,90 @@ class TextHistoryMenuItem(HistoryMenuItem):
 # class representing file items
 class FileHistoryMenuItem(HistoryMenuItem):
 	def get_label(self):
-		length = prefs.get_item_length()
+		# this shortens a pair of strings proportionally given a size constraint.
+		def balanced_constraint_shorten(pair, constraint):
+			total_length_to_shorten = len(pair[0]) + len(pair[1])
+
+			if constraint < total_length_to_shorten:
+				size_to_reduce = abs(constraint - total_length_to_shorten)
+				
+				string_ratio = Fraction(len(pair[0]),len(pair[1]))
+				first_ratio, second_ratio = string_ratio.numerator, string_ratio.denominator
+				total = string_ratio.denominator + string_ratio.numerator
+				
+				size_of_first_cut = (first_ratio * size_to_reduce / total) + 1
+				first_remainder_size = len(pair[0]) - size_of_first_cut
+				size_of_second_cut = (second_ratio * size_to_reduce / total) + 1
+				second_remainder_size = len(pair[1]) - size_of_second_cut
+
+				first_extreme_size = first_remainder_size/2
+				if first_extreme_size == 0:
+					first_extreme_size = 1
+				second_extreme_size = second_remainder_size/2
+				if second_extreme_size == 0:
+					second_extreme_size = 1
+
+				first = pair[0][:first_extreme_size] + u"\u2026" + pair[0][first_extreme_size+size_of_first_cut:]
+				if len(first) == len(pair[0]):
+					first = pair[0]
+				second = pair[1][:second_extreme_size] + u"\u2026" + pair[1][second_extreme_size+size_of_second_cut:]
+				if len(second) == len(pair[1]):
+					second = pair[1]
+				
+				# we might have missed it by 1
+				preliminary_lenght = len(first) + len(second)
+				if preliminary_lenght > constraint:
+					if len(first) > len(second):
+						first = pair[0][:first_extreme_size] + u"\u2026" + pair[0][first_extreme_size+size_of_first_cut+1:]
+					elif len(second) > len(first):
+						second = pair[1][:second_extreme_size] + u"\u2026" + pair[1][second_extreme_size+size_of_second_cut+1:]
+
+				return first, second
+			else:
+				return pair
+
 		lines = self.payload.split("\n")
-		files_with_comma = unicode(",".join(lines)[:length+length])
-		if len(files_with_comma) > length:
-			files_with_comma = files_with_comma[:length-1] + u'\u2026'
-		if len(lines) == 1:
-			l = "[" + _("file") + ": " + files_with_comma + "]"
+		
+		# we want to see if there are more files than the one shown
+		if len(lines) > 1:
+			label = "  (+ " + str(len(lines)-1) + " " + _("more") + ") "
 		else:
-			l = "[" + str(len(lines)) + " " + _("files") + ": " + files_with_comma + "]"
+			label = ""
+		
+		# we'll want to see if it's a regular file or a dir
+		if os.path.isdir(lines[0]):
+			first_file_tail = "/"
+		else:
+			first_file_tail = ""
+		first_file = os.path.basename(lines[0]) + first_file_tail
+
+		# common_path is the folder where the copied files reside
+		if len(lines) == 1:
+			if os.path.dirname(lines[0]) == "/":
+				common_path = "/"
+			else:
+				common_path = os.path.dirname(lines[0]) + "/"
+		else:
+			common_path = os.path.dirname(os.path.commonprefix(lines)) + "/"
+		common_path = common_path.replace(os.path.expanduser("~"), "~")
+		path_list = common_path.split("/")
+		last = len(path_list)-2
+		for d in range(last):
+			try:
+				path_list[d] = path_list[d][0]
+			except IndexError:
+				pass
+		# we shorten the label, if it's needed
+		available = prefs.get_item_length() - len(label) - len("/".join(path_list[:last-1])) - 5
+		first_file, path_list[last] = balanced_constraint_shorten((first_file, path_list[last]), available)
+
+		common_path = "/".join(path_list)
+
+		name_part = first_file + label
+		path_part = " [ " + common_path + " ]"
+		
+		l = u"\u25A4 " + name_part + path_part
+		l = l.replace("_", "__")
 		return l
 
 	def set_as_current(self, event=None):
@@ -101,7 +179,7 @@ class ImageHistoryMenuItem(HistoryMenuItem):
 		self.payload = self.pixbuf.get_pixels()
 	
 	def get_label(self):
-		l = "[" + _("image") + ": " + str(self.pixbuf.props.width) + u"\u2715" + str(self.pixbuf.props.height) + "]"
+		l = u"\u25A3 [" + str(self.pixbuf.props.width) + u"\u2715" + str(self.pixbuf.props.height) + "]"
 		return l
 
 	def set_as_current(self, event=None):
@@ -239,19 +317,23 @@ class HistoryMenuItemCollector(gobject.GObject):
 			self.data = [self.data[0]]
 		self.emit("data-change", len(self))
 
+	def delete_top(self):
+		self.data = self.data[1:]
+		if len(self) > 0:
+			self.select(None, self.data[0])
+		self.emit("data-change", len(self))
+	
+	def replace_top(self, data):
+		self.data[0] = data
+		self.select(None, self.data[0])
+		self.emit("data-change", len(self))
+
 	def adjust_maxlen(self, gconf=None, key=None, value=None, d=None):
 		self.maxlen = prefs.get_history_size()
 		for i in self.data[self.maxlen:]:
 			del i
 		self.data = self.data[:self.maxlen]
 		self.emit("length-adjusted", self.maxlen)
-
-	def add_items_to_menu(self, menu):
-		for i in self:
-			label = i.get_label()
-			item = gtk.MenuItem(label)
-			item.connect("activate", i.set_as_current)
-			menu.append(item)
 
 def new_signal(label, class_name, flag=gobject.SIGNAL_ACTION, ret=None, args=(int,)):
 	gobject.signal_new(label, class_name, flag, ret, args)

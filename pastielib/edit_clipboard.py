@@ -16,13 +16,12 @@
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import gtk
 import gtk.gdk
 
-
-class ClipboardEditorDialog():
-	def __init__(self):
+class ClipboardEditorDialog(object):
+	def __init__(self, protector):
+		self.protector = protector
 		self.clipboard = gtk.clipboard_get()
 		self.window = gtk.Window(gtk.WINDOW_TOPLEVEL)
 		self.window.set_title(_("Editing clipboard"))
@@ -54,7 +53,12 @@ class ClipboardEditorDialog():
 		hbox = gtk.HButtonBox()
 		hbox.set_spacing(6)
 		hbox.set_layout(gtk.BUTTONBOX_END)
+		
+		gtk.stock_add( (('pastie-replace', _("_Replace"), gtk.gdk.MOD1_MASK, gtk.gdk.keyval_from_name(_('R')), 'pastie'),) )
+		
 		hbox.add(create_button(gtk.STOCK_CANCEL, self.cancel_action))
+		hbox.add(create_button(gtk.STOCK_DELETE, self.delete_action))
+		hbox.add(create_button("pastie-replace", self.replace_action))
 		hbox.add(create_button(gtk.STOCK_OK, self.ok_action))
 		
 		vbox.pack_end(hbox, expand=False)
@@ -67,10 +71,19 @@ class ClipboardEditorDialog():
 	
 	def ok_action(self, event):
 		textbuffer = self.textview.get_buffer()
-		gtk.clipboard_get(gtk.gdk.SELECTION_CLIPBOARD).set_text(textbuffer.get_text(textbuffer.get_start_iter(), textbuffer.get_end_iter()))
+		new_text = textbuffer.get_text(textbuffer.get_start_iter(), textbuffer.get_end_iter())
+		if new_text not in ("", None):
+			gtk.clipboard_get().set_text(new_text)
+		self.window.destroy()
+	
+	def delete_action(self, event):
+		self.protector.delete_current()
 		self.window.destroy()
 
-if __name__ == "__main__":
-	w = ClipboardEditorDialog()
-	gtk.main()
-
+	def replace_action(self, event):
+		textbuffer = self.textview.get_buffer()
+		new_text = textbuffer.get_text(textbuffer.get_start_iter(), textbuffer.get_end_iter())
+		if new_text not in ("", None):
+			self.protector.replace_current(new_text)
+		self.window.destroy()
+		

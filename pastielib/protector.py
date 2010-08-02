@@ -148,15 +148,35 @@ class ClipboardProtector(object):
 
 	# erase the clipboard history. the current contents of the clipoard will remain.
 	def clean_history(self, event=None):
-		self.history.empty(full=False)
+#		self.clipboard.clear()
+		self.history.empty(full=True)
 		self.check()
+		self.save_history()
 		self.update_menu()
 	
+	def delete_current(self, event=None):
+		self.clipboard.clear()
+		self.history.delete_top()
+		self.save_history()
+		self.update_menu()
+
+	def replace_current(self, data, event=None):
+		self.clipboard.clear()
+		self.history.replace_top(history.TextHistoryMenuItem(data))
+		self.save_history()
+		self.update_menu()
+
 	# check clipboard contents.
 	def check(self, clipboard=None, event=None):
 		if not self.clipboard.wait_for_targets():
-			if self.history[0] != None:
-				self.history[0].set_as_current()
+			# some programs (JEdit) don't set the targets, but still set the text
+			no_targetted_text = self.clipboard.wait_for_text()
+			if no_targetted_text != None:
+				self.history.add(history.TextHistoryMenuItem(no_targetted_text))
+				self.save_history()
+			else:
+				if self.history[0] != None:
+					self.history[0].set_as_current()
 		elif self.clipboard.wait_is_text_available():
 			clipboard_tmp = self.clipboard.wait_for_text()
 			if clipboard_tmp not in ("", None):
@@ -205,16 +225,28 @@ class ClipboardProtector(object):
 		else:
 			return False
 	
+	def create_edit_dialog(self, event):
+		edit_dialog = edit.ClipboardEditorDialog(self)
+
 	# create and show the menu
 	def update_menu(self, gconfclient=None, gconfentry=None, gconfvalue=None, d=None):
 		menu = gtk.Menu()
 		if len(self.history) > 0:
-			self.history.add_items_to_menu(menu)
+			for i in self.history:
+				label = i.get_label()
+				item = gtk.MenuItem(label, use_underline=False)
+				item.connect("activate", i.set_as_current)
+				menu.append(item)
 			menu.append(gtk.SeparatorMenuItem())
 			if isinstance(self.history[0], history.TextHistoryMenuItem):
 				edit_clipboard_menu = gtk.MenuItem(_("Edit clipboard"))
-				edit_clipboard_menu.connect("activate", lambda w: edit.ClipboardEditorDialog())
+				edit_clipboard_menu.connect("activate", self.create_edit_dialog)
 				menu.append(edit_clipboard_menu)
+			if isinstance(self.history[0], history.ImageHistoryMenuItem) or \
+				isinstance(self.history[0], history.FileHistoryMenuItem):
+				delete_current_menu = gtk.MenuItem(_("Remove current"))
+				delete_current_menu.connect("activate", self.delete_current)
+				menu.append(delete_current_menu)
 			clean_menu = gtk.MenuItem(_("Clean history"))
 			clean_menu.connect("activate", self.clean_history)
 			menu.append(clean_menu)
